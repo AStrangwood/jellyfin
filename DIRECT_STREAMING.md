@@ -1,5 +1,26 @@
 # Direct Streaming in Jellyfin
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Play Methods](#play-methods)
+  - [DirectPlay vs DirectStream](#directplay-vs-directstream)
+- [Request Flow](#request-flow)
+  - [High-Level Flow Diagram](#high-level-flow-diagram)
+  - [1. Client Request](#1-client-request)
+  - [2. Stream State Creation](#2-stream-state-creation)
+  - [3. Direct Stream Decision Logic](#3-direct-stream-decision-logic)
+  - [4. Response Delivery](#4-response-delivery)
+- [StreamBuilder and Format Selection](#streambuilder-and-format-selection)
+  - [Direct Play Profile Matching](#direct-play-profile-matching)
+  - [Key Factors for Direct Streaming](#key-factors-for-direct-streaming)
+- [Protocol Types](#protocol-types)
+- [Performance Optimizations](#performance-optimizations)
+- [URL Construction](#url-construction)
+- [Integration Points](#integration-points)
+- [Security Considerations](#security-considerations)
+- [Summary](#summary)
+
 ## Overview
 
 Jellyfin server provides three primary methods for delivering media content to clients:
@@ -39,6 +60,34 @@ public bool IsDirectStream => MediaSource?.VideoType is not (VideoType.Dvd or Vi
 ```
 
 ## Request Flow
+
+### High-Level Flow Diagram
+
+```
+Client Request
+      ↓
+VideosController
+      ↓
+GetStreamingState (StreamingHelpers)
+      ↓
+Determine Play Method (StreamBuilder)
+      ↓
+   ┌──────────────────────────────┐
+   │                              │
+   ↓                              ↓
+DirectPlay/DirectStream      Transcode
+   │                              │
+   ↓                              ↓
+Return File Stream          Start FFmpeg Process
+   │                              │
+   ↓                              ↓
+PhysicalFileResult/      ProgressiveFileStream
+ProgressiveFileStream    (transcoded output)
+   │                              │
+   └──────────────┬───────────────┘
+                  ↓
+            Client Receives Stream
+```
 
 ### 1. Client Request
 
